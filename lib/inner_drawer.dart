@@ -60,6 +60,8 @@ class InnerDrawer extends StatefulWidget {
       this.leftAnimationType = InnerDrawerAnimation.static,
       this.rightAnimationType = InnerDrawerAnimation.static,
       this.backgroundColor,
+      this.overlayColor,
+      this.overlayBlend,
       this.innerDrawerCallback,
       this.onDragUpdate})
       : assert(leftChild != null || rightChild != null),
@@ -142,6 +144,12 @@ class InnerDrawer extends StatefulWidget {
   /// Color of the main background
   final Color backgroundColor;
 
+  /// Color of the scaffold's cover overlay
+  final Color overlayColor;
+
+  /// The BlendMode of the overlay color filter (default BlendMode.screen)
+  final BlendMode overlayBlend;
+    
   /// Optional callback that is called when a [InnerDrawer] is open or closed.
   final InnerDrawerCallback innerDrawerCallback;
 
@@ -156,6 +164,9 @@ class InnerDrawerState extends State<InnerDrawer>
     with SingleTickerProviderStateMixin {
   ColorTween _color =
       ColorTween(begin: Colors.transparent, end: Colors.black54);
+    ColorTween _overlayColor =
+    ColorTween(begin: Colors.black38, end: Colors.transparent);
+    //ColorTween(begin: widget.overlayColor != null ? widget.overlayColor.withOpacity(0.0) : Colors.transparent, end: widget.overlayColor ?? Colors.black38);
 
   double _initWidth = _kWidth;
   Orientation _orientation = Orientation.portrait;
@@ -197,6 +208,11 @@ class InnerDrawerState extends State<InnerDrawer>
     else
       _color = ColorTween(begin: Colors.transparent, end: Colors.black54);
 
+    if (widget.overlayColor != null)
+      _overlayColor = ColorTween(
+          begin: widget.overlayColor,
+          end: widget.overlayColor.withOpacity(0.0));
+      
     if (widget.onDragUpdate != null && _controller.value < 1) {
       widget.onDragUpdate((1 - _controller.value), _position);
     }
@@ -510,6 +526,13 @@ class InnerDrawerState extends State<InnerDrawer>
   Widget _scaffold() {
     assert(widget.borderRadius >= 0);
 
+    Widget scaffoldContent = widget.scaffold;
+    if (widget.overlayColor != null && _controller.value != 1.0)
+      scaffoldContent = ColorFiltered(
+        colorFilter: ColorFilter.mode(_overlayColor.evaluate(_controller), widget.overlayBlend ?? BlendMode.screen),
+        child: scaffoldContent,
+      );
+      
     Widget container = Container(
         key: _drawerKey,
         decoration: BoxDecoration(
@@ -526,9 +549,9 @@ class InnerDrawerState extends State<InnerDrawer>
             ? ClipRRect(
                 borderRadius: BorderRadius.circular(
                     (1 - _controller.value) * widget.borderRadius),
-                child: widget.scaffold,
+                child: scaffoldContent,
               )
-            : widget.scaffold);
+            : scaffoldContent);
 
     final Widget invC = _invisibleCover();
     if (invC != null)
